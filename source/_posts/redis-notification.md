@@ -2,17 +2,17 @@
 title: Redis Notification
 date: 2016-07-27 22:49:42
 tags: 
-- redis
+- Redis
 
 ---
 # 簡介
 在實現事件驅動設計的過程中，能夠讓資料庫在異動資料時自動發出通知是一個重要的環節，如此一來就不需要有另外一支程式不斷去查詢資料庫的異動，可以節省系統資源。
-本篇探討將使用 redis 的 keyspace notification 功能來實現資料異動的即時通知，並且以 PHP 程式來實作。
+本篇探討將使用 Redis 的 keyspace notification 功能來實現資料異動的即時通知，並且以 PHP 程式來實作。
 本篇將會以一個線上購物網站的物品庫存清單為例，展示如何實作即時顯示當前貨品庫存量的功能。
 
 <!-- more -->
 
-# redis 資料結構規劃
+# Redis 資料結構規劃
 商品的資料儲存在 product:#id 的 hash，
 並建立一個 set 用來維護商品清單。
 
@@ -22,7 +22,7 @@ tags:
 |hash      | product:#id  | 商品細節      |
 <caption>表1: 資料結構規劃</caption>
 
-<caption>建立 redis 資料</capion>
+<caption>建立 Redis 資料</capion>
 
     HMSET product:1 name "多力多滋組合包-綜合 54g*4包/組" price 55 stock 256
     HMSET product:2 name "【洋芋片】Lays樂事瑞士香濃起司 97g/包" price 32 stock 179
@@ -41,14 +41,14 @@ tags:
     SADD products 7
     SADD products 8
 
-# redis keyspace notification 
+# Redis keyspace notification 
 為了讓物品庫存數量能即時反應到應用程式，必須讓資料庫將資料的異動反應給應用程式，
-這邊說明如何使用 redis 的 keyspace notification 功能來實現異動事件通知。
+這邊說明如何使用 Redis 的 keyspace notification 功能來實現異動事件通知。
 至於更詳細的說明可以看 [官網說明文件][1]。
 [1]: http://redis.io/topics/notifications  "Redis Keyspace Notifications"
 
 keyspace notification 可讓應用程式訂閱 keyspace 更動的事件，
-當 redis 的資料有異動的時候有兩種類型的事件會被觸發：
+當 Redis 的資料有異動的時候有兩種類型的事件會被觸發：
 1. 第一種讓我們可以監聽某個 key 是否被異動，當它被異動的時候，我們可以得知異動這個 key 的命令類型，稱為 keyspace 事件。
 2. 第二種讓我們可以監聽是否有某個命令類型被執行，當它被執行時，透過這個事件，我們可以得知被這個命令影響到的 key，稱為 keyevent 事件。
 
@@ -68,9 +68,9 @@ K - Keyspace events
 E - Keyevent event
 A - All commands
 KEA 代表要訂閱所有命令類型的第一種和第二種事件。
-更改設定檔要重啟 redis 後才會生效。
+更改設定檔要重啟 Redis 後才會生效。
 
-redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事件發生的時候，redis 會分別發佈訊息到以下兩種 channel 上：
+Redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事件發生的時候，Redis 會分別發佈訊息到以下兩種 channel 上：
     1. PUBLISH __keyspace@<db id>__:<key name> <command type>
     2. PUBLISH __keyevent@<db id>__:<command type> <key name> 
 
@@ -175,7 +175,7 @@ redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事�
 從上面的結果我們可以知道一個命令對多個 key 的操作，是會引發多次 keyspace 事件和 keyevent 事件的。
 然後我們透過這些事件只能知道是甚麼 key 被影響、被甚麼指令影響，而不知道 key 被異動後的資料，如果想要知道 key 的最新資料則要自己再去讀取那個 key。
 
-# 使用 Predis 在 PHP 中操作 redis
+# 使用 Predis 在 PHP 中操作 Redis
 
 建立一個 redis-notify 專案
     
@@ -346,10 +346,10 @@ $client->connect(function ($client) use ($client_sync, $local_storage) {
 $client->getEventLoop()->run();
 ```
 
-這個程式維護一個本地的商品清單，並且隨時接收 redis 的最新異動來更新本地清單。
+這個程式維護一個本地的商品清單，並且隨時接收 Redis 的最新異動來更新本地清單。
 首先先建立一個 LocalStorage 物件來管理本地商品清單的增刪查改。
 然後使用 Predis Async 來訂閱所有關於 product：* 的異動，
-redis 的 keyspace notification 對要監聽的每個 key 都建立一個 channel
+Redis 的 keyspace notification 對要監聽的每個 key 都建立一個 channel
 要訂閱的 channel 樣式如下：
     
     __keyspace@*__:product:*
@@ -410,7 +410,7 @@ redis 的 keyspace notification 對要監聽的每個 key 都建立一個 channe
     stock: 158
     ----------------------------------------------
 
-另外開一個 redis client 來異動資料：
+另外開一個 Redis client 來異動資料：
     
     simon@simon:~/demos$ redis-cli
     127.0.0.1:6379> HMSET product:9 name '旺旺 仙貝經濟包' price 469 stock 79
@@ -438,5 +438,5 @@ redis 的 keyspace notification 對要監聽的每個 key 都建立一個 channe
 
 
 # 結論
-這邊介紹 redis 如何實現資料異動通知的功能。不過要注意的是 redis 不會保存通知過的訊息，因此如果對 redis 的連線斷線的話，斷線的應用程式是無法再取得斷線期間的異動通知。
-如果非常在意事件一定要通知到的話，要自己想辦法把事件保留起來，官網上說未來 redis 可能會將這些通知保留再另外的 SET 內，不過現階段還沒有，可能要自己實作保存事件的部份。
+這邊介紹 Redis 如何實現資料異動通知的功能。不過要注意的是 Redis 不會保存通知過的訊息，因此如果對 Redis 的連線斷線的話，斷線的應用程式是無法再取得斷線期間的異動通知。
+如果非常在意事件一定要通知到的話，要自己想辦法把事件保留起來，官網上說未來 Redis 可能會將這些通知保留再另外的 SET 內，不過現階段還沒有，可能要自己實作保存事件的部份。
