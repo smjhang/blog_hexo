@@ -10,6 +10,8 @@ tags:
 本篇探討將使用 redis 的 keyspace notification 功能來實現資料異動的即時通知，並且以 PHP 程式來實作。
 本篇將會以一個線上購物網站的物品庫存清單為例，展示如何實作即時顯示當前貨品庫存量的功能。
 
+<!-- more -->
+
 # redis 資料結構規劃
 商品的資料儲存在 product:#id 的 hash，
 並建立一個 set 用來維護商品清單。
@@ -126,13 +128,13 @@ redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事�
     3) "__keyspace@0__:test4"
     4) "set"
 
-注意 ```127.0.0.1:6379> PSUBSCRIBE __keyevent@*__:del``` 那個 redis-cli 沒有任何更新，因為沒有任何 del 操作被執行。
+注意 127.0.0.1:6379> PSUBSCRIBE __keyevent@*__:del 那個 redis-cli 沒有任何更新，因為沒有任何 del 操作被執行。
 現在刪除 test, tests, test3, test4：
 
     127.0.0.1:6379> del test1 test2 test3 test4
     (integer) 4
 
-可以看到對 keyspace (```127.0.0.1:6379> PSUBSCRIBE __keyspace@*__:test*```) 的監聽如下：
+可以看到對 keyspace (127.0.0.1:6379> PSUBSCRIBE __keyspace@*__:test*) 的監聽如下：
     
     1) "pmessage"
     2) "__keyspace@*__:test*"
@@ -151,7 +153,7 @@ redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事�
     3) "__keyspace@0__:test4"
     4) "del"
 
-對 keyevent (```127.0.0.1:6379> PSUBSCRIBE __keyevent@*__:del```)的監聽如下：
+對 keyevent (127.0.0.1:6379> PSUBSCRIBE __keyevent@*__:del)的監聽如下：
     
     1) "pmessage"
     2) "__keyevent@*__:del"
@@ -190,157 +192,159 @@ redis 的事件通知是透過 PUB/SUB 來進行的，因此當上述兩種事�
       "require":{"predis/predis-async":"dev-master"}
     }
 
-執行 ``` composer install ``` 來從 Packagist 下載 Predis-Async
+執行  composer install  來從 Packagist 下載 Predis-Async
 
     compsoer install
 
 可以開始用 Predis 了，編輯程式檔 notify.php 如下：
 
-    <?php
-    require __DIR__.'/vendor/autoload.php';
-    
-    class LocalStorage
+```php
+<?php
+require __DIR__.'/vendor/autoload.php';
+
+class LocalStorage
+{
+    private $product_store = []; // 目前所有 products
+
+    /**
+     * 使用前更新目前所有 products
+     * @param \Predis\Client $client_sync
+     */
+    public function init(\Predis\Client $client_sync)
     {
-        private $product_store = []; // 目前所有 products
-    
-        /**
-         * 使用前更新目前所有 products
-         * @param \Predis\Client $client_sync
-         */
-        public function init(\Predis\Client $client_sync)
-        {
-            $all_product_keys = $client_sync->keys('product:*');
-            foreach ($all_product_keys as $product_key) {
-                // 抓取 id
-                preg_match('/product:(\d+)/', $product_key, $matches);
-                $id = $matches[1];
-                // 設定 id=>product 關聯
-                $this->product_store[$id] = $client_sync->hgetall($product_key);
-            }
-            // 排序 product_store
-            ksort($this->product_store);
+        $all_product_keys = $client_sync->keys('product:*');
+        foreach ($all_product_keys as $product_key) {
+            // 抓取 id
+            preg_match('/product:(\d+)/', $product_key, $matches);
+            $id = $matches[1];
+            // 設定 id=>product 關聯
+            $this->product_store[$id] = $client_sync->hgetall($product_key);
         }
-    
-        /**
-         * 判斷 id 是否在 product_store 內
-         * @param $id
-         * @return bool
-         */
-        public function contains($id)
-        {
-            if (isset($this->product_store[$id])) {
-                return true;
-            }
-            return false;
+        // 排序 product_store
+        ksort($this->product_store);
+    }
+
+    /**
+     * 判斷 id 是否在 product_store 內
+     * @param $id
+     * @return bool
+     */
+    public function contains($id)
+    {
+        if (isset($this->product_store[$id])) {
+            return true;
         }
-    
-    
-        /**
-         * 處理新增事件
-         * @param $id
-         * @param $product
-         */
-        function insertHandler($id, $product)
-        {
-            echo "新增 product_store 項目:\n";
+        return false;
+    }
+
+
+    /**
+     * 處理新增事件
+     * @param $id
+     * @param $product
+     */
+    function insertHandler($id, $product)
+    {
+        echo "新增 product_store 項目:\n";
+        echo "id: $id\n";
+        echo "name: {$product['name']}\n";
+        echo "price: {$product['price']}\n";
+        echo "stock: {$product['stock']}\n\n";
+        $this->product_store[$id] = $product;
+    }
+
+
+    /**
+     * 處理更改事件
+     * @param $id
+     * @param $product
+     */
+    function updateHandler($id, $product)
+    {
+        echo "更改 product_store 項目:\n";
+        echo "id: $id\n";
+        if ($this->product_store[$id]['name'] !== $product['name']) {
+            echo "name: {$product['name']}\n";
+            $this->product_store[$id]['name'] = $product['name'];
+        }
+        if ($this->product_store[$id]['price'] !== $product['price']) {
+            echo "price: {$product['price']}\n";
+            $this->product_store[$id]['price'] = $product['price'];
+        }
+        if ($this->product_store[$id]['stock'] !== $product['stock']) {
+            echo "stock: {$product['stock']}\n";
+            $this->product_store[$id]['stock'] = $product['stock'];
+        }
+        echo "\n";
+    }
+
+    /**
+     * 處理刪除事件
+     * @param $id
+     * @param $product
+     */
+    function deleteHandler($id, $product)
+    {
+        echo "刪除 product_store 項目:\n";
+        echo "id: $id\n\n";
+        unset($this->product_store[$id]);
+    }
+
+    /**
+     * 顯示 product_store
+     */
+    function showStore()
+    {
+        foreach ($this->product_store as $id => $product) {
             echo "id: $id\n";
             echo "name: {$product['name']}\n";
             echo "price: {$product['price']}\n";
-            echo "stock: {$product['stock']}\n\n";
-            $this->product_store[$id] = $product;
+            echo "stock: {$product['stock']}\n";
+            echo "----------------------------------------------\n";
         }
-    
-    
-        /**
-         * 處理更改事件
-         * @param $id
-         * @param $product
-         */
-        function updateHandler($id, $product)
-        {
-            echo "更改 product_store 項目:\n";
-            echo "id: $id\n";
-            if ($this->product_store[$id]['name'] !== $product['name']) {
-                echo "name: {$product['name']}\n";
-                $this->product_store[$id]['name'] = $product['name'];
-            }
-            if ($this->product_store[$id]['price'] !== $product['price']) {
-                echo "price: {$product['price']}\n";
-                $this->product_store[$id]['price'] = $product['price'];
-            }
-            if ($this->product_store[$id]['stock'] !== $product['stock']) {
-                echo "stock: {$product['stock']}\n";
-                $this->product_store[$id]['stock'] = $product['stock'];
-            }
-            echo "\n";
-        }
-    
-        /**
-         * 處理刪除事件
-         * @param $id
-         * @param $product
-         */
-        function deleteHandler($id, $product)
-        {
-            echo "刪除 product_store 項目:\n";
-            echo "id: $id\n\n";
-            unset($this->product_store[$id]);
-        }
-    
-        /**
-         * 顯示 product_store
-         */
-        function showStore()
-        {
-            foreach ($this->product_store as $id => $product) {
-                echo "id: $id\n";
-                echo "name: {$product['name']}\n";
-                echo "price: {$product['price']}\n";
-                echo "stock: {$product['stock']}\n";
-                echo "----------------------------------------------\n";
-            }
-        }
-    
     }
-    
-    $client = new Predis\Async\Client('tcp://127.0.0.1:6379');
-    $client_sync = new Predis\Client('tcp://127.0.0.1:6379');
-    
-    $local_storage = new LocalStorage();
-    $local_storage->init($client_sync);
-    $local_storage->showStore();
-    
-    
-    /**
-     * 註冊處理 keyspace 異動的事件，並根據事件的訊息做相應的處理
-     */
-    $client->connect(function ($client) use ($client_sync, $local_storage) {
-        // 使用 psubscribe 訂閱 product:#id 這種樣式的 key 被異動的事件
-        $client->pubSubLoop(['psubscribe'=>'__keyspace@*__:product:*'],
-        function ($event, $pubsub) use ($client_sync, $local_storage) {
-            // 當 product:#id 被異動的時候，根據事件發生的 channel 的名稱取得 key 的名稱和 product 的 id
-            if (preg_match('/__keyspace@\d+__:(product:(\d+))/', $event->channel, $matches)) {
-                $product_key = $matches[1];
-                $product_id = $matches[2];
-                // 取得被異動後，最新的 product 資料
-                $product = $client_sync->hgetall($product_key);
-                // 根據事件傳來的訊息得知操作 key 的類型
-                $op = $event->payload;
-                if ($op === 'del') {
-                    $local_storage->deleteHandler($product_id, $product);
-                } else if ($op === 'hset') {
-                    // 當操作類型是 hset 的時候，需要從目前的 product store 去判斷是新增還是修改
-                    if ($local_storage->contains($product_id)) {
-                        $local_storage->updateHandler($product_id, $product);
-                    } else {
-                        $local_storage->insertHandler($product_id,$product);
-                    }
+
+}
+
+$client = new Predis\Async\Client('tcp://127.0.0.1:6379');
+$client_sync = new Predis\Client('tcp://127.0.0.1:6379');
+
+$local_storage = new LocalStorage();
+$local_storage->init($client_sync);
+$local_storage->showStore();
+
+
+/**
+ * 註冊處理 keyspace 異動的事件，並根據事件的訊息做相應的處理
+ */
+$client->connect(function ($client) use ($client_sync, $local_storage) {
+    // 使用 psubscribe 訂閱 product:#id 這種樣式的 key 被異動的事件
+    $client->pubSubLoop(['psubscribe'=>'__keyspace@*__:product:*'],
+    function ($event, $pubsub) use ($client_sync, $local_storage) {
+        // 當 product:#id 被異動的時候，根據事件發生的 channel 的名稱取得 key 的名稱和 product 的 id
+        if (preg_match('/__keyspace@\d+__:(product:(\d+))/', $event->channel, $matches)) {
+            $product_key = $matches[1];
+            $product_id = $matches[2];
+            // 取得被異動後，最新的 product 資料
+            $product = $client_sync->hgetall($product_key);
+            // 根據事件傳來的訊息得知操作 key 的類型
+            $op = $event->payload;
+            if ($op === 'del') {
+                $local_storage->deleteHandler($product_id, $product);
+            } else if ($op === 'hset') {
+                // 當操作類型是 hset 的時候，需要從目前的 product store 去判斷是新增還是修改
+                if ($local_storage->contains($product_id)) {
+                    $local_storage->updateHandler($product_id, $product);
+                } else {
+                    $local_storage->insertHandler($product_id,$product);
                 }
             }
-        });
+        }
     });
-    // 開始監聽 keyspace 異動事件
-    $client->getEventLoop()->run();
+});
+// 開始監聽 keyspace 異動事件
+$client->getEventLoop()->run();
+```
 
 這個程式維護一個本地的商品清單，並且隨時接收 redis 的最新異動來更新本地清單。
 首先先建立一個 LocalStorage 物件來管理本地商品清單的增刪查改。

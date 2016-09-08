@@ -7,12 +7,12 @@ title: web development
 subtitle:
 description:
 author: Siou-Ming Jhang
-language:
+language: zh-tw
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://yoursite.com
+url: https://smjhang.github.io
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -39,9 +39,9 @@ relative_link: true
 future: true
 highlight:
   enable: true
+  auto_detect: true
   line_number: true
-  auto_detect: false
-  tab_replace:
+  tab_replace: ''
 
 # Category & Tag
 default_category: uncategorized
@@ -63,11 +63,13 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: jacman
+theme: next
 stylus:
   compress: true
 
-
+search:
+  path: search.xml
+  field: post
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
