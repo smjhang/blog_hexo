@@ -121,7 +121,7 @@
     }, mobileNavAnimDuration);
   }
 
-  $('#main-nav-toggle').on('click', function(){
+  $('#main.jpg-nav-toggle').on('click', function(){
     if (isMobileNavAnim) return;
 
     startMobileNavAnim();
