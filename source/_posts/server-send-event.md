@@ -277,9 +277,9 @@ echo json_encode($output);
 |-------------------------------------|-------------------------------------------------|
 |main.js                              | 負責整合各部分程式碼並操作 DOM                       |
 |ProductList.js                       | 負責管理商品清單的資料                              |
-|ProductListException.js              | 負責通知其他程式 ProductList 發生異常                |
+|ProductListException.js              | 代表 ProductList 發生異常的物件                |
 |ServerSendEventHandler.js            | 負責處理產品清單異動的事件                            |
-|ServerSendEventHandlerException.js   | 負責通知其他程式 ServerSendEventHandler 發生異常      |
+|ServerSendEventHandlerException.js   | 代表 ServerSendEventHandler 發生異常的物件      |
 
 main.js:
 ```JavaScript
@@ -431,7 +431,7 @@ export default class ProductList {
     deleteItemById (deleting_item) {
         let index = this.product_list.findIndex(item => deleting_item.id === item.id);
         if (index === -1) {
-            throw new ProductListException(`Error #2: Delete product error, not such product id: ${deleting_item.id}.`);
+            throw new ProductListException(`Error #2: Delete product error, no such product id: ${deleting_item.id}.`);
         }
         this.product_list.splice(index,1);
     }
@@ -443,7 +443,7 @@ export default class ProductList {
     updateItem (updating_item) {
         let index = this.product_list.findIndex(item => item.id === updating_item.id);
         if (index === -1) {
-            throw new ProductListException(`Error #3: Update product error, not such product id: ${updating_item.id}.`);
+            throw new ProductListException(`Error #3: Update product error, no such product id: ${updating_item.id}.`);
         }
         // 更新產品部分資訊
         for (let prop in updating_item) {
@@ -643,7 +643,7 @@ export default class ServerSendEventHandlerException  extends Error {
 </body>
 </html>
 ```
-整個專案的程式可以再 [GitHub](https://github.com/smjhang/demos/tree/master/server-send-event)下載。
+整個專案的程式可以在 [GitHub](https://github.com/smjhang/demos/tree/master/server-send-event)下載。
 
 ## 開始測試
 首先在 Redis 插入起始資料:
