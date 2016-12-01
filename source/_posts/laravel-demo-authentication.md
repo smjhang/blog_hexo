@@ -36,7 +36,7 @@ DB_PASSWORD=your_password
 ```
 
 然後這邊使用 gmail 來給使用者傳輸密碼郵件，當然也可以使用 sendemail 搭配 postfix 來寄送 email，這邊不詳細介紹，有興趣的人可以看[鳥哥的Linux私房菜](http://linux.vbird.org/linux_server/0380mail.php)了解如何設定 postfix 以及 [Laravel 官網](https://laravel.com/docs/5.3/mail) 了解如何設定 mail server 的連線。
-如果應用程式要使用 gamil 的話，需要先跟 gmail 申請 app password 給應用程式使用。要在 laravel 中使用 gmail 的應用程式密碼可以在 .env 的 MAIL_PASSWORD 的部分填入申請好的應用程式密碼。
+如果應用程式要使用 google 帳戶來使用 gmail 服務的話，需要先跟 google 申請 app password 給應用程式使用。要在 laravel 中使用 gmail 的應用程式密碼可以在 .env 的 MAIL_PASSWORD 的部分填入申請好的應用程式密碼。
 如果要使用其他的 mail server 需要參考該 mail server 的使用方式。
 
 ```
@@ -47,6 +47,8 @@ MAIL_USERNAME=your_gamil_account
 MAIL_PASSWORD=your_gamil_app_password
 MAIL_ENCRYPTION=tls
 ```
+修改完 .env 檔案，需要重啟 server。
+
 查看頁面:
 {% asset_img auth_index.jpg 首頁 %}
 註冊頁面:
