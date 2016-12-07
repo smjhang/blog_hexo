@@ -24,9 +24,9 @@ php artisan migrate
 ```
 第一個命令會建立這些功能的 views 和 routes，第二個命令會建立所需的資料庫。
 因為驗證使用者的功能必須要有一個存放使用者相關資訊的資料庫來做為驗證之用，因此 Laravel 也提供了建立這些資料庫的語法。
-這些語法以 migrations 的形式存在 database/migrations 裡，有了 migrations 我們甚至可以不用連進MySQL就能對各資料表的結構進行管理以及版本控制。
+這些語法以 migrations 的形式存在 database/migrations 裡，有了 migrations 我們甚至可以不用連進 MySQL 就能對各資料表的結構進行管理以及版本控制。
 但是在使用 migrations 之前，要先建立好資料庫，因為 migrations 只有建立資料表的部分，而資料表必須要在一個資料庫內建立。
-因此我們必須先手動建好資料庫，這邊的假設資料庫的名字是 laravel_demo，連進MySQL執行以下 SQL:
+因此我們必須先手動建好資料庫，這邊的假設資料庫的名字是 laravel_demo，連進 MySQL 執行以下 SQL:
 ```
 CREATE DATABASE laravel_demo;
 ```
