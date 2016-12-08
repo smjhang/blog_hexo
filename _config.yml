@@ -9,7 +9,7 @@ description:
 author: Siou-Ming Jhang
 language: zh-tw
 timezone:
-
+disqus_shortname: https-smjhang-github-io
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: https://smjhang.github.io
