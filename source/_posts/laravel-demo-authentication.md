@@ -70,7 +70,7 @@ MAIL_ENCRYPTION=tls
 寄發的 email:
 {% asset_img auth_email.jpg 寄發的 email %}
 
-小結：
+# 小結：
 大部分的網頁應用程式都需要能辨認使用者，在電子商務類型的網站這幾乎是必備的功能。
 Laravel 為我們提供了大部分常用的使用者驗證功能，剩下的只需要客製化出需要的功能就好。
 想了解更多如何客製化使用者驗證的方式可以參考 [Laravel 官網](https://laravel.com/docs/5.3/authentication)。

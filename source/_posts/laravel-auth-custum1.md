@@ -1,5 +1,5 @@
 ---
-title: Laravel 開發實踐 - 客製化使用者驗證功能(1)
+title: Laravel 客製化使用者驗證功能-增加使用者資料欄位
 date: 2016-12-07 06:08:59
 tags: 
 - Laravel
@@ -149,7 +149,6 @@ $user->save();
 $hidden 屬性指定在模型做序列化(Serialization)給外界讀取時需要隱藏的資料欄位。由於 password 是機密資訊，不允許外洩，所以這邊就有 password 了，
 而 remember_token 是自動登入用的資訊同樣也不允許外洩。
 
-[修改] 調整 login 功能
 # 修改登入功能
 修改 App\Http\Controllers\Auth\LoginController，加入以下 username 方法如下：
 ```PHP
@@ -467,3 +466,13 @@ LoginController 透過使用 AuthenticatesUsers 這個 Laravel 內建的 trait �
 @endsection
 
 ```
+從註冊頁面可以看到新的欄位已被加入了:
+{% asset_img new_register.jpg 註冊頁面 %}
+登入頁面已經從原本的用 email 登入，改成用登入帳號登入了:
+{% asset_img new_login.jpg 登入頁面 %}
+登入後的頁面，可以看到左上方顯示的名稱為使用者名稱，不是登入帳號::
+{% asset_img new_logined.jpg 登入後頁面 %}
+# 小結
+本篇介紹了如何客製化 Laravel 內建的使用者驗證功能：增加欄位、改用不同的欄位資料登入。
+Laravel 提供的使用者登入、重設密碼、註冊使用者、忘記密碼寄送重設密碼 email 等功能都可以在對應的 controller 找到，
+從 controller 可以找到對應的 view 和使用的 model，再依需求修改就可以了。
