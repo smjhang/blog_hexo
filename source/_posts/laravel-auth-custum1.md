@@ -188,7 +188,6 @@ class LoginController extends Controller
     {
         $this->middleware('guest', ['except' => 'logout']);
     }
-    <b>
     /**
      * Get the login username to be used by the controller.
      *
@@ -198,7 +197,6 @@ class LoginController extends Controller
     {
         return 'login_name';
     }
-    </b>
 }
 
 ```
