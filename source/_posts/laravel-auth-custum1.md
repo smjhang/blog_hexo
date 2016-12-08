@@ -30,7 +30,7 @@ App\Http\Controllers\Auth\ForgotPasswordController
 使用 migrations 的好處是可以對資料庫的修改進行紀錄，並根據這些紀錄進行資料庫的版本控制。
 這個功能只建議在開發環境使用，因為對資料庫欄位的修改通常會需要修改既有的資料。
 在開發環境的測試資料都是可以自行填充的，還可以搭配 [Database: Seeding](https://laravel.com/docs/5.3/seeding) 來建立填充資料的腳本。
-Migrations 的價值是團隊開發時同步各開發成員的開發環境，使得大家都用相同的資料庫欄位定義和測試資料來開發、測試。
+Migrations 的價值是可以團隊開發時同步各開發成員的開發環境，使得大家都用相同的資料庫欄位定義和測試資料來開發、測試。
 由於 Laravel 已經提供了建立 users 資料表所需的 migrations，而在 [Laravel 初探 - 使用者驗證][1] 中也執行該 migrations 將 users 建立起來了。
 因此本篇將建立用來修改 users 資料表的 migration，執行以下命令來建立 migration:
 ```
@@ -93,8 +93,8 @@ class ChangeUsersTable extends Migration
 最後再新增一個 status 欄位做為使用者帳號的狀態。
 在 down 的部分我習慣將 up 執行過的動作，依相反的順序執行相反的動作。
 然後 unique 索引在新增和移除的過程中會檢查資料表的資料是否符合唯一性限制，因此我習慣將資料清空再執行 migrate。
-如需要更多關於 migration 的指令可以參考 [Database: Migrations](https://laravel.com/docs/5.3/migrations)。
-migrations 建好後可以執行以下命令來修改資料庫：
+如需要更多關於 migration 的實作方式可以參考 [Database: Migrations](https://laravel.com/docs/5.3/migrations)。
+Migrations 建好後可以執行以下命令來修改資料庫：
 ```
 php artisan migrate
 ```
@@ -144,7 +144,325 @@ $user = new User(Input::all());
 $user->save();
 ```
 只有在 $fillable 內的欄位才可以透過整批設定的方式存進資料庫。
-由於新增了 'login_name', 'user_name' 所以要把這兩個欄位加進去，否則將資料寫進資料庫了。
+由於新增了 'login_name', 'user_name' 所以要把這兩個欄位加進去，否則就不會將資料寫進資料庫了。
 這邊沒有 status 的理由是因為 status 是控制帳號是否停權的欄位，不允許使用者自行修改，因此不讓它可以在整批設定的情況下被寫入資料庫。
 $hidden 屬性指定在模型做序列化(Serialization)給外界讀取時需要隱藏的資料欄位。由於 password 是機密資訊，不允許外洩，所以這邊就有 password 了，
 而 remember_token 是自動登入用的資訊同樣也不允許外洩。
+
+[修改] 調整 login 功能
+# 修改登入功能
+修改 App\Http\Controllers\Auth\LoginController，加入以下 username 方法如下：
+```PHP
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
+
+class LoginController extends Controller
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Login Controller
+    |--------------------------------------------------------------------------
+    |
+    | This controller handles authenticating users for the application and
+    | redirecting them to your home screen. The controller uses a trait
+    | to conveniently provide its functionality to your applications.
+    |
+    */
+
+    use AuthenticatesUsers;
+
+    /**
+     * Where to redirect users after login.
+     *
+     * @var string
+     */
+    protected $redirectTo = '/home';
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('guest', ['except' => 'logout']);
+    }
+
+    /**
+     * Get the login username to be used by the controller.
+     *
+     * @return string
+     */
+    public function username()
+    {
+        return 'login_name';
+    }
+}
+
+```
+LoginController 透過使用 AuthenticatesUsers 這個 Laravel 內建的 trait 來提供各方法的實作，而其中 username 這個方法就是用來指定登入要用的欄位的。
+由於本次的目標就是要將原本用 email 欄位登入的行為改成用 login_name 來登入，所以在 LoginController 覆寫(overwrite) username 這個方法。
+一般來說使用 framework 時並不會直接去改 framework 內建的程式碼，而是透過繼承覆寫、實作介面等方式來客製化需要的功能。
+現在要修改介面，改資料庫欄位需要修改三個介面：主版面、登入功能的介面、註冊功能的介面。這三個介面分別放在： 
+~/laravel_demo/resources/views/layouts/app.blade.php
+~/laravel_demo/resources/views/auth/login.blade.php
+~/laravel_demo/resources/views/auth/register.blade.php
+除了更改修改這些介面綁定的模型欄位以外，我還進行了中文化。修改如下：
+~/laravel_demo/resources/views/layouts/app.blade.php
+```PHP
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ config('app.name', 'Laravel') }}</title>
+
+    <!-- Styles -->
+    <link href="/css/app.css" rel="stylesheet">
+
+    <!-- Scripts -->
+    <script>
+        window.Laravel = <?php echo json_encode([
+            'csrfToken' => csrf_token(),
+        ]); ?>
+    </script>
+</head>
+<body>
+    <div id="app">
+        <nav class="navbar navbar-default navbar-static-top">
+            <div class="container">
+                <div class="navbar-header">
+
+                    <!-- Collapsed Hamburger -->
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#app-navbar-collapse">
+                        <span class="sr-only">Toggle Navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+
+                    <!-- Branding Image -->
+                    <a class="navbar-brand" href="{{ url('/') }}">
+                        {{ config('app.name', 'Laravel') }}
+                    </a>
+                </div>
+
+                <div class="collapse navbar-collapse" id="app-navbar-collapse">
+                    <!-- Left Side Of Navbar -->
+                    <ul class="nav navbar-nav">
+                        &nbsp;
+                    </ul>
+
+                    <!-- Right Side Of Navbar -->
+                    <ul class="nav navbar-nav navbar-right">
+                        <!-- Authentication Links -->
+                        @if (Auth::guest())
+                            <li><a href="{{ url('/login') }}">Login</a></li>
+                            <li><a href="{{ url('/register') }}">Register</a></li>
+                        @else
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+                                    {{ Auth::user()->user_name }} <span class="caret"></span>
+                                </a>
+
+                                <ul class="dropdown-menu" role="menu">
+                                    <li>
+                                        <a href="{{ url('/logout') }}"
+                                            onclick="event.preventDefault();
+                                                     document.getElementById('logout-form').submit();">
+                                            Logout
+                                        </a>
+
+                                        <form id="logout-form" action="{{ url('/logout') }}" method="POST" style="display: none;">
+                                            {{ csrf_field() }}
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        @endif
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        @yield('content')
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/app.js"></script>
+</body>
+</html>
+```
+~/laravel_demo/resources/views/auth/login.blade.php
+```PHP
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">Login</div>
+                <div class="panel-body">
+                    <form class="form-horizontal" role="form" method="POST" action="{{ url('/login') }}">
+                        {{ csrf_field() }}
+
+                        <div class="form-group{{ $errors->has('login_name') ? ' has-error' : '' }}">
+                            <label for="login_name" class="col-md-4 control-label">登入帳號</label>
+
+                            <div class="col-md-6">
+                                <input id="login_name" type="text" class="form-control" name="login_name" value="{{ old('login_name') }}" required autofocus>
+
+                                @if ($errors->has('login_name'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('login_name') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }}">
+                            <label for="password" class="col-md-4 control-label">密碼</label>
+
+                            <div class="col-md-6">
+                                <input id="password" type="password" class="form-control" name="password" required>
+
+                                @if ($errors->has('password'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('password') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-6 col-md-offset-4">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="remember"> 記住我
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-8 col-md-offset-4">
+                                <button type="submit" class="btn btn-primary">
+                                    登入
+                                </button>
+
+                                <a class="btn btn-link" href="{{ url('/password/reset') }}">
+                                    忘記密碼?
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+```
+~/laravel_demo/resources/views/auth/register.blade.php
+```PHP
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">Register</div>
+                <div class="panel-body">
+                    <form class="form-horizontal" role="form" method="POST" action="{{ url('/register') }}">
+                        {{ csrf_field() }}
+
+                        <div class="form-group{{ $errors->has('login_name') ? ' has-error' : '' }}">
+                            <label for="login_name" class="col-md-4 control-label">登入帳號</label>
+
+                            <div class="col-md-6">
+                                <input id="login_name" type="text" class="form-control" name="login_name" value="{{ old('login_name') }}" required autofocus>
+
+                                @if ($errors->has('login_name'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('login_name') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group{{ $errors->has('user_name') ? ' has-error' : '' }}">
+                            <label for="login_name" class="col-md-4 control-label">顯示名稱</label>
+
+                            <div class="col-md-6">
+                                <input id="user_name" type="text" class="form-control" name="user_name" value="{{ old('user_name') }}" required autofocus>
+
+                                @if ($errors->has('user_name'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('user_name') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group{{ $errors->has('email') ? ' has-error' : '' }}">
+                            <label for="email" class="col-md-4 control-label">電子郵件</label>
+
+                            <div class="col-md-6">
+                                <input id="email" type="email" class="form-control" name="email" value="{{ old('email') }}" required>
+
+                                @if ($errors->has('email'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('email') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }}">
+                            <label for="password" class="col-md-4 control-label">密碼</label>
+
+                            <div class="col-md-6">
+                                <input id="password" type="password" class="form-control" name="password" required>
+
+                                @if ($errors->has('password'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('password') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password-confirm" class="col-md-4 control-label">再次確認密碼</label>
+
+                            <div class="col-md-6">
+                                <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-6 col-md-offset-4">
+                                <button type="submit" class="btn btn-primary">
+                                    Register
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+```
