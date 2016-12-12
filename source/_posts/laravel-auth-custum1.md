@@ -203,7 +203,8 @@ class LoginController extends Controller
 LoginController 透過使用 AuthenticatesUsers 這個 Laravel 內建的 trait 來提供各方法的實作，而其中 username 這個方法就是用來指定登入要用的欄位的。
 由於本次的目標就是要將原本用 email 欄位登入的行為改成用 login_name 來登入，所以在 LoginController 覆寫(overwrite) username 這個方法。
 一般來說使用 framework 時並不會直接去改 framework 內建的程式碼，而是透過繼承覆寫、實作介面等方式來客製化需要的功能。
-現在要修改介面，改資料庫欄位需要修改三個介面：主版面、登入功能的介面、註冊功能的介面。這三個介面分別放在： 
+
+然後還要修改介面，改資料庫欄位需要修改三個介面：主版面、登入功能的介面、註冊功能的介面。這三個介面分別放在： 
 ~/laravel_demo/resources/views/layouts/app.blade.php
 ~/laravel_demo/resources/views/auth/login.blade.php
 ~/laravel_demo/resources/views/auth/register.blade.php
