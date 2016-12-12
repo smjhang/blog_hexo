@@ -16,6 +16,8 @@ url: https://smjhang.github.io
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
+sitemap:
+path: sitemap.xml
 
 # Directory
 source_dir: source
