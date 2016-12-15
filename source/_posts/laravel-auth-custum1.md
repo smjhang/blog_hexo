@@ -469,7 +469,7 @@ LoginController 透過使用 AuthenticatesUsers 這個 Laravel 內建的 trait �
 {% asset_img new_register.jpg 註冊頁面 %}
 登入頁面已經從原本的用 email 登入，改成用登入帳號登入了:
 {% asset_img new_login.jpg 登入頁面 %}
-登入後的頁面，可以看到左上方顯示的名稱為使用者名稱，不是登入帳號::
+登入後的頁面，可以看到右上方顯示的名稱為使用者名稱，不是登入帳號::
 {% asset_img new_logined.jpg 登入後頁面 %}
 # 小結
 本篇介紹了如何客製化 Laravel 內建的使用者驗證功能：增加欄位、改用不同的欄位資料登入。
